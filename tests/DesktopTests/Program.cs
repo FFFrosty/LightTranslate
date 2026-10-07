@@ -460,39 +460,120 @@ internal static class Program
     private static Native.CursorPoint ActivateFixtureWithMouseClick(SelectionFixtureForm fixture)
     {
         var clientPoint = new Point(8, Math.Max(4, fixture.Editor.Font.Height / 2));
-        var screenPoint = fixture.Editor.PointToScreen(clientPoint);
-        var cursorPoint = new Native.CursorPoint { X = screenPoint.X, Y = screenPoint.Y };
-        Native.GetWindowRect(fixture.Handle, out var fixtureRect);
-        var windowAtPoint = Native.WindowFromPoint(cursorPoint);
+        var attempts = new List<string>();
+        foreach (var location in FixtureCandidateLocations(fixture))
+        {
+            if (!Native.SetWindowPos(
+                    fixture.Handle,
+                    Native.HWND_TOPMOST,
+                    location.X,
+                    location.Y,
+                    0,
+                    0,
+                    Native.SWP_NOSIZE | Native.SWP_SHOWWINDOW))
+            {
+                attempts.Add($"move ({location.X},{location.Y}) failed");
+                continue;
+            }
+
+            fixture.BringToFront();
+            Application.DoEvents();
+            PumpDelay(TimeSpan.FromMilliseconds(60));
+
+            var screenPoint = fixture.Editor.PointToScreen(clientPoint);
+            var cursorPoint = new Native.CursorPoint { X = screenPoint.X, Y = screenPoint.Y };
+            if (!IsOwnedByFixture(fixture, cursorPoint, out var ownership))
+            {
+                attempts.Add($"candidate ({location.X},{location.Y}) rejected: {ownership}");
+                continue;
+            }
+
+            if (!Native.SetCursorPos(cursorPoint.X, cursorPoint.Y))
+            {
+                attempts.Add($"candidate ({location.X},{location.Y}) could not move the cursor");
+                continue;
+            }
+
+            PumpDelay(TimeSpan.FromMilliseconds(40));
+            if (!IsOwnedByFixture(fixture, cursorPoint, out ownership))
+            {
+                attempts.Add($"candidate ({location.X},{location.Y}) became covered: {ownership}");
+                continue;
+            }
+
+            if (Native.SendMouseInput(Native.MOUSEEVENTF_LEFTDOWN) != 1)
+            {
+                throw new InvalidOperationException("SendInput could not press the fixture activation point");
+            }
+
+            PumpDelay(TimeSpan.FromMilliseconds(40));
+            if (Native.SendMouseInput(Native.MOUSEEVENTF_LEFTUP) != 1)
+            {
+                throw new InvalidOperationException("SendInput could not release the fixture activation point");
+            }
+
+            PumpDelay(TimeSpan.FromMilliseconds(40));
+            return cursorPoint;
+        }
+
+        throw new InvalidOperationException(
+            "could not find an unoccluded fixture activation point without clicking another window: " +
+            string.Join("; ", attempts));
+    }
+
+    private static IEnumerable<Point> FixtureCandidateLocations(SelectionFixtureForm fixture)
+    {
+        var seen = new HashSet<Point>();
+        foreach (var screen in Screen.AllScreens)
+        {
+            var area = screen.WorkingArea;
+            var left = area.Left + 16;
+            var top = area.Top + 16;
+            var right = Math.Max(left, area.Right - fixture.Width - 16);
+            var bottom = Math.Max(top, area.Bottom - fixture.Height - 16);
+            var center = new Point(
+                area.Left + Math.Max(0, (area.Width - fixture.Width) / 2),
+                area.Top + Math.Max(0, (area.Height - fixture.Height) / 2));
+
+            foreach (var candidate in new[]
+            {
+                new Point(left, top),
+                new Point(right, top),
+                new Point(left, bottom),
+                new Point(right, bottom),
+                center
+            })
+            {
+                if (seen.Add(candidate))
+                {
+                    yield return candidate;
+                }
+            }
+        }
+    }
+
+    private static bool IsOwnedByFixture(
+        SelectionFixtureForm fixture,
+        Native.CursorPoint point,
+        out string diagnostic)
+    {
+        var windowAtPoint = Native.WindowFromPoint(point);
         var rootWindow = windowAtPoint == IntPtr.Zero
             ? IntPtr.Zero
             : Native.GetAncestor(windowAtPoint, Native.GA_ROOT);
-        Require(
-            rootWindow == fixture.Handle,
-            $"activation point is not owned by the test fixture (visible={Native.IsWindowVisible(fixture.Handle)}, " +
+        if (rootWindow == fixture.Handle)
+        {
+            diagnostic = string.Empty;
+            return true;
+        }
+
+        Native.GetWindowRect(fixture.Handle, out var fixtureRect);
+        diagnostic =
+            $"visible={Native.IsWindowVisible(fixture.Handle)}, " +
             $"fixtureRect=({fixtureRect.Left},{fixtureRect.Top},{fixtureRect.Right},{fixtureRect.Bottom}), " +
-            $"point=({cursorPoint.X},{cursorPoint.Y}), window 0x{windowAtPoint.ToInt64():X}, " +
-            $"root 0x{rootWindow.ToInt64():X}, fixture 0x{fixture.Handle.ToInt64():X})");
-
-        if (!Native.SetCursorPos(cursorPoint.X, cursorPoint.Y))
-        {
-            throw new InvalidOperationException("could not move the cursor to the fixture activation point");
-        }
-
-        PumpDelay(TimeSpan.FromMilliseconds(40));
-        if (Native.SendMouseInput(Native.MOUSEEVENTF_LEFTDOWN) != 1)
-        {
-            throw new InvalidOperationException("SendInput could not press the fixture activation point");
-        }
-
-        PumpDelay(TimeSpan.FromMilliseconds(40));
-        if (Native.SendMouseInput(Native.MOUSEEVENTF_LEFTUP) != 1)
-        {
-            throw new InvalidOperationException("SendInput could not release the fixture activation point");
-        }
-
-        PumpDelay(TimeSpan.FromMilliseconds(40));
-        return cursorPoint;
+            $"point=({point.X},{point.Y}), window 0x{windowAtPoint.ToInt64():X}, " +
+            $"root 0x{rootWindow.ToInt64():X}, fixture 0x{fixture.Handle.ToInt64():X}";
+        return false;
     }
 
     private static string SaveFixtureFailureScreenshot(SelectionFixtureForm fixture, string? requestedScreenshot)

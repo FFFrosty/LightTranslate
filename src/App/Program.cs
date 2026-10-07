@@ -11,21 +11,26 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         var selfTest = HasFlag(args, "--selftest") || HasFlag(args, "--demo");
+        var previewKind = ReadPreviewKind(args);
         var smoke = HasFlag(args, "--smoke");
         var diagnostics = HasFlag(args, "--diagnostics");
 
-        using var instance = new Mutex(true, "Local\\LightTranslate.SingleInstance", out var created);
+        var isDemo = selfTest || previewKind is not null;
+        using var instance = new Mutex(
+            true,
+            isDemo ? "Local\\LightTranslate.Demo.SingleInstance" : "Local\\LightTranslate.SingleInstance",
+            out var created);
         if (!created)
         {
             MessageBox.Show("轻译已经在运行。", "轻译", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 2;
         }
 
-        if (selfTest)
+        if (selfTest || previewKind is not null)
         {
             DemoTrace.Configure(ReadTracePath(args));
             DemoTrace.Write("process", "demo_start");
-            using var demoContext = new TrayApplicationContext(demoMode: true, ReadExitAfter(args));
+            using var demoContext = new TrayApplicationContext(demoMode: true, ReadExitAfter(args), previewKind);
             Application.Run(demoContext);
             DemoTrace.Write("process", "demo_exit");
             DemoTrace.Close();
@@ -94,5 +99,20 @@ internal static class Program
         }
 
         return Environment.GetEnvironmentVariable("LIGHTTRANSLATE_DEMO_TRACE");
+    }
+
+    private static string? ReadPreviewKind(IReadOnlyList<string> args)
+    {
+        if (HasFlag(args, "--preview-result"))
+        {
+            return "result";
+        }
+
+        if (HasFlag(args, "--preview-manual"))
+        {
+            return "manual";
+        }
+
+        return null;
     }
 }

@@ -4,12 +4,20 @@
 
 项目地址：<https://github.com/FFFrosty/LightTranslate>
 
+![浅色翻译窗口](docs/images/translation-light.png)
+
+![深色翻译窗口](docs/images/translation-dark.png)
+
 ## 功能
 
 - 选中文字后显示浮动的「译」按钮，点击后打开可复制的翻译结果。
 - 提供 `Ctrl + Alt + T` 快捷键和托盘菜单中的手动翻译入口。
 - 选择文字时不调用网络服务；只有点击翻译、使用快捷键或提交手动翻译后才发送文字。
 - 根据导入配置中的目标语言和备用语言自动决定翻译方向。默认配置为外文译为简体中文、中文译为英文。
+- 参考 Cherry Studio 划词翻译布局：圆角工具条、紧凑结果窗口、可折叠原文、置顶和透明度调节。
+- 译文随模型生成逐步显示，支持停止、重新翻译和复制；服务返回普通 JSON 时也可读取结果。
+- 结果窗口可临时切换目标语言；语言设置可保存首选目标语言和备用语言。
+- 浅色、深色和跟随系统主题；译文支持标题、粗体、列表和代码等基础 Markdown 显示。
 - API Key 使用 Windows 当前用户的 DPAPI 加密，保存在 `%LOCALAPPDATA%\LightTranslate\profile.bin`；程序不保存翻译历史。
 
 ## 配置方式
@@ -30,6 +38,10 @@
 2. 在目标程序中拖动鼠标选中文字。
 3. 点击选区附近的「译」按钮。
 4. 如果目标程序不提供可访问的选区，可以在选中文字后按 `Ctrl + Alt + T`；也可以从托盘打开「手动翻译」窗口并粘贴文字。
+
+结果窗口中，`Esc` 在生成时停止翻译，完成后关闭窗口；`R` 重新翻译，`C` 复制完整译文。选中译文后仍可使用 `Ctrl + C` 复制选中的部分。手动输入窗口使用 `Ctrl + Enter` 提交。
+
+源语言标签是本地粗略判断，不支持精确识别所有语种。需要时可在结果窗口选择目标语言，该选择只影响当前窗口；语言设置中的首选和备用语言会保存到加密配置。
 
 图片、扫描件和密码框不在当前版本支持范围内。管理员权限程序、部分 PDF 阅读器、远程桌面和自绘控件可能无法读取选区；这种情况下可以使用手动翻译入口。单次输入最多 12,000 个字符。
 
@@ -54,13 +66,15 @@
 .\build.ps1
 ```
 
-脚本会先运行核心测试，再把程序发布到 `artifacts\LightTranslate`，并复制本说明文件。也可以指定输出目录：
+脚本会先运行核心和窗口交互测试，再把程序发布到 `artifacts\LightTranslate`，并复制本说明文件。也可以指定输出目录：
 
 ```powershell
 .\build.ps1 -Output .\artifacts\LightTranslate
 ```
 
-构建需要 .NET 8 SDK。`tests\CoreTests` 是离线核心测试；`tests\DesktopTests` 是 Windows 桌面集成测试，默认不会被 CI 自动运行，因为它需要真实桌面、鼠标和窗口焦点。
+构建需要 Windows 和 .NET 8 SDK。`tests\CoreTests` 是离线核心测试；`tests\UiTests` 使用模拟翻译检查窗口交互，不访问模型、真实配置或剪贴板。`tests\DesktopTests` 是 Windows 桌面集成测试，默认不会被 CI 自动运行，因为它需要真实桌面、鼠标和窗口焦点。
+
+窗口测试会在 `.artifacts\ui` 生成供人工检查的截图。离线预览可运行 `LightTranslate.exe --preview-result` 或 `--preview-manual`，预览不会加载真实翻译配置或注册划词鼠标钩子。
 
 ## 桌面测试
 
@@ -90,3 +104,5 @@ dotnet run --project tests\DesktopTests\CherryTranslate.DesktopTests.csproj -- `
 ## 许可
 
 本项目以 MIT License 发布，详见 [LICENSE](LICENSE)。
+
+划词界面的参考来源和实现范围见 [界面参考说明](docs/cherry-ui-reference.md)。本项目不是 Cherry Studio 的官方版本或插件。

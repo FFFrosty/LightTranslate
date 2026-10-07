@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 10
 
     steps:
       - name: Check out source
@@ -21,7 +22,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Run core tests and publish application
+      - name: Run core and UI tests and publish application
         shell: pwsh
         run: .\build.ps1 -Output .\artifacts\LightTranslate
 

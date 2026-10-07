@@ -21,6 +21,23 @@ internal sealed class ProfileRuntime
         Current = profile;
     }
 
+    public bool UpdateLanguages(string primary, string alternate)
+    {
+        if (Current is null || string.IsNullOrWhiteSpace(primary) || string.IsNullOrWhiteSpace(alternate))
+        {
+            return false;
+        }
+
+        var updated = Current with
+        {
+            TargetLanguage = primary.Trim().ToLowerInvariant(),
+            AlternateLanguage = alternate.Trim().ToLowerInvariant()
+        };
+        _store.Save(updated);
+        Current = updated;
+        return true;
+    }
+
     public ProfileLoadResult LoadOrImport()
     {
         try

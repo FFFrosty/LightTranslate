@@ -10,6 +10,22 @@ internal static class NativeMethods
     internal const int WM_LBUTTONUP = 0x0202;
     internal const int WM_LBUTTONDBLCLK = 0x0203;
     internal const int WM_HOTKEY = 0x0312;
+    internal const int WM_NCHITTEST = 0x0084;
+    internal const int WM_NCLBUTTONDOWN = 0x00A1;
+    internal const int WM_SETTINGCHANGE = 0x001A;
+    internal const int WM_THEMECHANGED = 0x031A;
+    internal const int EM_GETFIRSTVISIBLELINE = 0x00CE;
+    internal const int EM_LINESCROLL = 0x00B6;
+    internal const int HTCLIENT = 1;
+    internal const int HTCAPTION = 2;
+    internal const int HTLEFT = 10;
+    internal const int HTRIGHT = 11;
+    internal const int HTTOP = 12;
+    internal const int HTTOPLEFT = 13;
+    internal const int HTTOPRIGHT = 14;
+    internal const int HTBOTTOM = 15;
+    internal const int HTBOTTOMLEFT = 16;
+    internal const int HTBOTTOMRIGHT = 17;
 
     internal const uint MOD_ALT = 0x0001;
     internal const uint MOD_CONTROL = 0x0002;
@@ -81,6 +97,12 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern IntPtr CallNextHookEx(IntPtr hook, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    internal static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    internal static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     internal static extern IntPtr GetModuleHandle(string? moduleName);

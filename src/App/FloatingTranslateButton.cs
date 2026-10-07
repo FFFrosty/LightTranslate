@@ -1,8 +1,10 @@
+using System.Drawing.Drawing2D;
+
 namespace CherryTranslate.App;
 
 internal sealed class FloatingTranslateButton : Form
 {
-    private readonly Button _button;
+    private readonly TranslateToolbarButton _button;
     private readonly ToolTip _toolTip;
     private SelectionProbe? _probe;
 
@@ -12,29 +14,23 @@ internal sealed class FloatingTranslateButton : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
-        AutoScaleMode = AutoScaleMode.None;
-        BackColor = Color.FromArgb(42, 120, 218);
-        Padding = new Padding(1);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        BackColor = ThemeManager.Palette.Surface;
+        Padding = new Padding(0);
+        Name = "FloatingTranslateToolbar";
+        AccessibleName = "轻译翻译工具条";
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
 
-        _button = new Button
-        {
-            Text = "译",
-            Dock = DockStyle.Fill,
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = Color.White,
-            BackColor = Color.FromArgb(42, 120, 218),
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
-            TabStop = false,
-            UseVisualStyleBackColor = false,
-            Cursor = Cursors.Hand
-        };
-        _button.FlatAppearance.BorderSize = 0;
+        _button = new TranslateToolbarButton();
         _button.Click += (_, _) => Clicked?.Invoke(_probe);
         Controls.Add(_button);
 
         _toolTip = new ToolTip { InitialDelay = 250, AutoPopDelay = 5000 };
         _toolTip.SetToolTip(_button, "点击翻译；不会自动读取文本");
-        Size = new Size(32, 32);
+        Size = new Size(112, 36);
+        ThemeManager.Changed += OnThemeChanged;
+        Resize += (_, _) => UiDrawing.ApplyRoundedRegion(this, ScaleLogical(10));
     }
 
     public event Action<SelectionProbe?>? Clicked;
@@ -66,13 +62,17 @@ internal sealed class FloatingTranslateButton : Form
         {
             dpi = 96;
         }
-        var size = Math.Max(26, (int)Math.Round(32 * dpi / 96d));
+        var width = Math.Max(86, (int)Math.Round(112 * dpi / 96d));
+        var height = Math.Max(30, (int)Math.Round(36 * dpi / 96d));
+        var margin = Math.Max(6, (int)Math.Round(8 * dpi / 96d));
         var screen = Screen.FromPoint(probe.ScreenPoint);
-        var x = probe.ScreenPoint.X + Math.Max(6, size / 4);
-        var y = probe.ScreenPoint.Y - size - Math.Max(6, size / 4);
-        x = Math.Clamp(x, screen.WorkingArea.Left, screen.WorkingArea.Right - size);
-        y = Math.Clamp(y, screen.WorkingArea.Top, screen.WorkingArea.Bottom - size);
-        Size = new Size(size, size);
+        var x = probe.ScreenPoint.X - width / 2;
+        var aboveY = probe.ScreenPoint.Y - height - margin;
+        var belowY = probe.ScreenPoint.Y + margin;
+        var y = aboveY >= screen.WorkingArea.Top ? aboveY : belowY;
+        x = Math.Clamp(x, screen.WorkingArea.Left, screen.WorkingArea.Right - width);
+        y = Math.Clamp(y, screen.WorkingArea.Top, screen.WorkingArea.Bottom - height);
+        Size = new Size(width, height);
 
         if (!Visible)
         {
@@ -84,8 +84,8 @@ internal sealed class FloatingTranslateButton : Form
             NativeMethods.HWND_TOPMOST,
             x,
             y,
-            size,
-            size,
+            width,
+            height,
             NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_SHOWWINDOW);
         NativeMethods.ShowWindow(Handle, NativeMethods.SW_SHOWNOACTIVATE);
     }
@@ -97,6 +97,12 @@ internal sealed class FloatingTranslateButton : Form
     }
 
     protected override bool ShowWithoutActivation => true;
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        UiDrawing.FillRounded(e.Graphics, ClientRectangle, ThemeManager.Palette.Surface, ScaleLogical(10));
+    }
 
     protected override CreateParams CreateParams
     {
@@ -125,8 +131,19 @@ internal sealed class FloatingTranslateButton : Form
     {
         if (disposing)
         {
+            ThemeManager.Changed -= OnThemeChanged;
             _toolTip.Dispose();
         }
         base.Dispose(disposing);
     }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        BackColor = ThemeManager.Palette.Surface;
+        _button.Invalidate();
+        Invalidate();
+    }
+
+    private int ScaleLogical(int value)
+        => Math.Max(2, (int)Math.Round(value * (DeviceDpi <= 0 ? 96 : DeviceDpi) / 96d));
 }

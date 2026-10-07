@@ -11,6 +11,17 @@ Run from the repository root:
 dotnet run --project tests/UiTests/CherryTranslate.UiTests.csproj -c Release
 ```
 
+To exercise the logical 96-DPI layout in a separate test process, run:
+
+```powershell
+dotnet run --project tests/UiTests/CherryTranslate.UiTests.csproj -c Release -- --dpi-unaware
+```
+
+The switch changes only this test process's DPI awareness; it does not change
+Windows or the display configuration, and it is not a substitute for testing
+real multi-monitor DPI transitions. Its screenshots are written to
+`.artifacts/ui-dpi-unaware/`, while the default run uses `.artifacts/ui/`.
+
 The test writes visual-review screenshots to `.artifacts/ui/`. It records the
 actual process DPI in `ui-result-dpi-<dpi>.png`, and also captures deterministic
 window-resize samples at 150% and 200% of the base client size plus the narrow

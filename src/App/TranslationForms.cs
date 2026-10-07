@@ -1095,8 +1095,8 @@ internal sealed class TranslationResultForm : CherryForm
         {
             Name = "LanguageSettingsPanel",
             Dock = DockStyle.Fill,
-            Height = 64,
-            MinimumSize = new Size(0, 64),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = ThemeManager.Palette.Card,
             Padding = new Padding(8, 5, 8, 5),
             Margin = new Padding(0, 0, 0, 6)
@@ -1108,12 +1108,14 @@ internal sealed class TranslationResultForm : CherryForm
             RowCount = 2,
             BackColor = ThemeManager.Palette.Card,
             Margin = new Padding(0),
-            Padding = new Padding(0)
+            Padding = new Padding(0),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(new Label
         {
             Text = "首选目标语言",
@@ -1139,6 +1141,24 @@ internal sealed class TranslationResultForm : CherryForm
         _alternateLanguage.SelectedIndexChanged += AlternateLanguageChanged;
         layout.Controls.Add(_alternateLanguage, 1, 1);
         panel.Controls.Add(layout);
+
+        // A ComboBox can report a larger native height than its assigned
+        // Height (especially in a DPI-unaware process). Let each row account
+        // for the control's preferred height and its default vertical margin,
+        // then add the panel padding. This keeps both rows inside the card at
+        // 96 DPI without relying on a guessed fixed height.
+        var comboHeight = Math.Max(
+            _preferredLanguage.GetPreferredSize(new Size(0, 0)).Height,
+            _alternateLanguage.GetPreferredSize(new Size(0, 0)).Height);
+        comboHeight = Math.Max(comboHeight,
+            Math.Max(_preferredLanguage.Height, _alternateLanguage.Height));
+        var rowMargin = Math.Max(
+            _preferredLanguage.Margin.Vertical,
+            _alternateLanguage.Margin.Vertical);
+        var rowHeight = comboHeight + rowMargin;
+        layout.MinimumSize = new Size(0, rowHeight * 2);
+        panel.MinimumSize = new Size(0, layout.MinimumSize.Height + panel.Padding.Vertical);
+        panel.Height = panel.MinimumSize.Height;
         return panel;
     }
 

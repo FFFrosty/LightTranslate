@@ -33,6 +33,10 @@ Invoke-DotNet `
     -FailureMessage 'UI tests failed.'
 
 Invoke-DotNet `
+    -Arguments @('run', '--project', $uiTests, '-c', 'Release', '--no-build', '--', '--dpi-unaware') `
+    -FailureMessage '96-DPI UI tests failed.'
+
+Invoke-DotNet `
     -Arguments @('publish', $appProject, '-c', 'Release', '--self-contained', 'false', '-o', $outputPath) `
     -FailureMessage 'Publish failed.'
 

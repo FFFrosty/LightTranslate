@@ -12,12 +12,14 @@ namespace CherryTranslate.UiTests;
 internal static class Program
 {
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
+        var dpiUnaware = args.Any(argument =>
+            string.Equals(argument, "--dpi-unaware", StringComparison.OrdinalIgnoreCase));
         // Keep an exception from an async WinForms callback from opening a
         // modal .NET error dialog and hanging a headless or CI run.
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
-        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        Application.SetHighDpiMode(dpiUnaware ? HighDpiMode.DpiUnaware : HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
@@ -25,7 +27,10 @@ internal static class Program
         {
             using var messageHost = UiMessageHost.Create();
             var resultFormType = UiDiscovery.FindTranslationFormType();
-            var artifactDirectory = Path.Combine(Environment.CurrentDirectory, ".artifacts", "ui");
+            var artifactDirectory = Path.Combine(
+                Environment.CurrentDirectory,
+                ".artifacts",
+                dpiUnaware ? "ui-dpi-unaware" : "ui");
             Directory.CreateDirectory(artifactDirectory);
 
             var failures = new List<(string Name, Exception Error)>();

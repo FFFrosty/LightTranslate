@@ -74,7 +74,7 @@
 
 构建需要 Windows 和 .NET 8 SDK。`tests\CoreTests` 是离线核心测试；`tests\UiTests` 使用模拟翻译检查窗口交互，不访问模型、真实配置或剪贴板。`tests\DesktopTests` 是 Windows 桌面集成测试，默认不会被 CI 自动运行，因为它需要真实桌面、鼠标和窗口焦点。
 
-窗口测试会在 `.artifacts\ui` 生成供人工检查的截图。离线预览可运行 `LightTranslate.exe --preview-result` 或 `--preview-manual`，预览不会加载真实翻译配置或注册划词鼠标钩子。
+窗口测试会在 `.artifacts\ui` 生成供人工检查的截图，并在单独进程中使用 96 DPI 逻辑坐标再检查一次布局（截图在 `.artifacts\ui-dpi-unaware`），不会更改 Windows 缩放设置。离线预览可运行 `LightTranslate.exe --preview-result` 或 `--preview-manual`，预览不会加载真实翻译配置或注册划词鼠标钩子。
 
 ## 桌面测试
 

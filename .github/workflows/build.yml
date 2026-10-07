@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run core tests and publish application
+        shell: pwsh
+        run: .\build.ps1 -Output .\artifacts\LightTranslate
+
+      - name: Build desktop test harness
+        shell: pwsh
+        run: dotnet build tests\DesktopTests\CherryTranslate.DesktopTests.csproj -c Release
+
+      - name: Upload application artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LightTranslate
+          path: artifacts/LightTranslate
+          if-no-files-found: error

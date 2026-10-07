@@ -1,0 +1,31 @@
+# .NET build output
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.pdb
+
+# Local build, test, and debugging artifacts
+/.artifacts/
+/artifacts/
+/work/
+/outputs/
+/publish/
+TestResults/
+coverage/
+
+# Local secrets and application data
+.env
+.env.*
+!.env.example
+**/profile.bin
+**/*.db
+**/*.sqlite
+**/*.sqlite-*
+**/*.log
+**/logs/
+
+# Operating-system files
+.DS_Store
+Thumbs.db

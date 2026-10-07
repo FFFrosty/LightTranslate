@@ -196,6 +196,24 @@ internal enum UiIcon
 
 internal static class UiDrawing
 {
+    public static void ClearButtonBackground(Control control, Graphics graphics)
+    {
+        // These owner-painted buttons must not ask WinForms to replay the parent
+        // paint (or neighbouring text) to simulate a transparent background.
+        var background = ThemeManager.Palette.Surface;
+        for (var parent = control.Parent; parent is not null; parent = parent.Parent)
+        {
+            if (parent.BackColor.A == 255)
+            {
+                background = parent.BackColor;
+                break;
+            }
+        }
+
+        using var brush = new SolidBrush(background);
+        graphics.FillRectangle(brush, control.ClientRectangle);
+    }
+
     public static int Scale(Control control, int logical)
         => Math.Max(1, (int)Math.Round(logical * (control.DeviceDpi <= 0 ? 96 : control.DeviceDpi) / 96d));
 
@@ -346,16 +364,23 @@ internal sealed class UiIconButton : Button
         FlatAppearance.BorderSize = 0;
         TabStop = false;
         UseVisualStyleBackColor = false;
-        BackColor = Color.Transparent;
+        BackColor = ThemeManager.Palette.Surface;
         ForeColor = ThemeManager.Palette.SecondaryText;
         Cursor = Cursors.Hand;
         Size = new Size(28, 26);
-        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
     }
 
     public UiIcon Icon { get; }
 
     public bool IsActive { get; set; }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        _hover = false;
+        base.OnEnabledChanged(e);
+        Invalidate();
+    }
 
     protected override void OnMouseEnter(EventArgs e)
     {
@@ -373,9 +398,10 @@ internal sealed class UiIconButton : Button
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        UiDrawing.ClearButtonBackground(this, e.Graphics);
         var palette = ThemeManager.Palette;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        if (_hover || IsActive)
+        if (Enabled && (_hover || IsActive))
         {
             UiDrawing.FillRounded(e.Graphics, ClientRectangle, palette.AccentSurface, UiDrawing.Scale(this, 6));
         }
@@ -385,7 +411,7 @@ internal sealed class UiIconButton : Button
             e.Graphics,
             Icon,
             new Rectangle((Width - iconSize) / 2, (Height - iconSize) / 2, iconSize, iconSize),
-            IsActive ? palette.Accent : _hover ? palette.Text : palette.SecondaryText);
+            !Enabled ? palette.SecondaryText : IsActive ? palette.Accent : _hover ? palette.Text : palette.SecondaryText);
     }
 }
 
@@ -404,16 +430,23 @@ internal sealed class UiTextButton : Button
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         UseVisualStyleBackColor = false;
-        BackColor = Color.Transparent;
+        BackColor = ThemeManager.Palette.Surface;
         ForeColor = ThemeManager.Palette.SecondaryText;
         Cursor = Cursors.Hand;
         AutoSize = true;
         MinimumSize = new Size(42, 26);
         Padding = new Padding(8, 2, 8, 2);
-        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
     }
 
     public UiIcon? Icon { get; }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        _hover = false;
+        base.OnEnabledChanged(e);
+        Invalidate();
+    }
 
     protected override void OnSizeChanged(EventArgs e)
     {
@@ -481,9 +514,10 @@ internal sealed class UiTextButton : Button
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        UiDrawing.ClearButtonBackground(this, e.Graphics);
         var palette = ThemeManager.Palette;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        var background = _hover ? palette.AccentSurface : palette.Muted;
+        var background = Enabled && _hover ? palette.AccentSurface : palette.Muted;
         UiDrawing.FillRounded(e.Graphics, ClientRectangle, background, UiDrawing.Scale(this, 6));
         if (Icon is { } icon)
         {
@@ -562,9 +596,17 @@ internal sealed class TranslateToolbarButton : Button
         FlatAppearance.BorderSize = 0;
         TabStop = false;
         UseVisualStyleBackColor = false;
+        BackColor = ThemeManager.Palette.Surface;
         Cursor = Cursors.Hand;
         Dock = DockStyle.Fill;
-        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        _hover = false;
+        base.OnEnabledChanged(e);
+        Invalidate();
     }
 
     protected override void OnMouseEnter(EventArgs e)
@@ -583,11 +625,12 @@ internal sealed class TranslateToolbarButton : Button
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        UiDrawing.ClearButtonBackground(this, e.Graphics);
         var palette = ThemeManager.Palette;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var scale = Math.Max(1d, Height / 36d);
         var radius = Math.Max(2, (int)Math.Round(9 * scale));
-        var fill = _hover ? palette.AccentSurface : palette.Card;
+        var fill = Enabled && _hover ? palette.AccentSurface : palette.Card;
         UiDrawing.FillRounded(e.Graphics, ClientRectangle, fill, radius);
         UiDrawing.DrawRoundedBorder(e.Graphics, new Rectangle(0, 0, Width - 1, Height - 1), palette.Border, radius);
 

@@ -5,6 +5,12 @@ translator. They run as a Windows Forms STA console process, use no network,
 do not load the real profile, and do not drive the mouse or the user's
 clipboard.
 
+Button painting regressions compare complete pixel buffers after a black
+prefill, hover exit, active-state changes, and disabling/re-enabling. They
+exercise light and dark surface/card/muted backgrounds through a transparent
+parent, and verify that native button painting does not replay neighbouring
+parent content. Button click and accessibility behavior are also checked.
+
 Run from the repository root:
 
 ```powershell

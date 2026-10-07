@@ -34,6 +34,7 @@ internal static class Program
             Directory.CreateDirectory(artifactDirectory);
 
             var failures = new List<(string Name, Exception Error)>();
+            RunTest("button paint backgrounds and state transitions", failures, ButtonPaintingTests.Run);
             RunTest("original and language controls", failures,
                 () => TestOriginalAndLanguageControls(resultFormType, artifactDirectory));
             RunTest("markdown content", failures, () => TestMarkdownContentPreservation(resultFormType));
